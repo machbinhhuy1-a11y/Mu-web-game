@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>MU Classic Solo Web RPG</title>
+<style>
+:root{--gold:#d9b65b;--gold2:#7e642b;--dark:#080a0e;--panel:#11151bdd;--red:#b51e25;--blue:#1763ad}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050609;color:#eee;font-family:Arial,Helvetica,sans-serif}
+#game{position:fixed;inset:0;background:#16251a}
+canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:auto}
+button{font:inherit;color:#eee}
+.panel{background:linear-gradient(180deg,#1c2028f2,#090b0ff2);border:1px solid #80672f;box-shadow:0 2px 12px #000b,inset 0 0 0 1px #d8bd6720;border-radius:6px}
+#top{position:fixed;left:10px;top:10px;width:275px;padding:8px;z-index:10;pointer-events:none}
+.title{color:#f2d37b;font-weight:800}.small{font-size:11px;color:#aaa}
+.bar{height:12px;background:#17191d;border:1px solid #4d4d4d;border-radius:7px;overflow:hidden;margin-top:3px}
+.fill{height:100%}.hp{background:linear-gradient(#ff5a5a,#86131a)}.mp{background:linear-gradient(#62c7ff,#155a9c)}.xp{background:linear-gradient(#f9dd63,#8c6810)}
+#target{position:fixed;right:10px;top:10px;width:230px;padding:8px;display:none;z-index:10;pointer-events:none}
+#targetName{color:#ffd66a;font-weight:800}
+#rightTop{position:fixed;right:10px;top:95px;z-index:10;display:flex;flex-direction:column;gap:6px}
+.uiBtn{background:linear-gradient(#333944,#11141a);border:1px solid #80672f;border-radius:5px;color:#e8cb75;padding:7px 9px;font-weight:700}
+#bottom{position:fixed;left:50%;bottom:9px;transform:translateX(-50%);z-index:12;display:flex;gap:5px;padding:6px}
+.slot{width:48px;height:48px;border:1px solid #796333;background:linear-gradient(#30353d,#0e1014);border-radius:5px;text-align:center;padding:2px;color:#ddd}
+.slot b{display:block;color:#f4d36d;font-size:20px}.slot span{font-size:10px;color:#aaa}
+#windows{position:fixed;inset:0;z-index:20;pointer-events:none}
+.win{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,92vw);max-height:82vh;overflow:auto;padding:12px;display:none;pointer-events:auto}
+.win h3{margin:0 0 8px;color:#f0cf6c}.close{float:right}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.item{height:58px;background:#171a20;border:1px solid #5c4d2d;border-radius:4px;text-align:center;padding:4px;font-size:10px;position:relative}
+.item .ico{font-size:23px;display:block}.item .q{position:absolute;right:3px;bottom:2px;color:#ffd86a}
+.row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #ffffff0d}
+.skillRow{display:grid;grid-template-columns:55px 1fr 70px;gap:6px;align-items:center;margin:6px 0}
+#toast{position:fixed;left:50%;top:67%;transform:translate(-50%,-50%);z-index:30;background:#080a0ddd;border:1px solid #9c7b35;border-radius:5px;color:#ffe59b;padding:8px 12px;opacity:0;transition:.2s;pointer-events:none}
+#touch{display:none;position:fixed;inset:0;z-index:15;pointer-events:none}
+#joy{position:absolute;left:18px;bottom:32px;width:112px;height:112px;border-radius:50%;border:2px solid #ffffff26;background:#ffffff0b;pointer-events:auto}
+#knob{position:absolute;left:31px;top:31px;width:46px;height:46px;border-radius:50%;background:#d9b65b44;border:1px solid #e4cf8a77}
+#touchBtns{position:absolute;right:16px;bottom:27px;display:flex;gap:8px;align-items:end;pointer-events:auto}
+.tbtn{width:54px;height:54px;border-radius:50%;background:#12161cdd;border:2px solid #80672f;color:#f4d36d;font-weight:800}
+#lootText{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:25;display:none;background:#07090dcc;border:1px solid #80672f;padding:8px;color:#ffe19a;border-radius:5px}
+@media(max-width:800px){#touch{display:block}#top{width:215px;font-size:12px}#rightTop{top:92px}#rightTop .uiBtn{padding:5px 7px;font-size:11px}.slot{width:43px;height:43px}.slot b{font-size:17px}.win{max-height:75vh}}
+</style>
+</head>
+<body>
+<div id="game"><canvas id="c"></canvas></div>
+
+<div id="top" class="panel">
+  <div class="title">DARK KNIGHT <span class="small">Lv.<b id="lv">1</b></span></div>
+  <div class="bar"><div id="hp" class="fill hp"></div></div><div class="small">HP <span id="hpT"></span></div>
+  <div class="bar"><div id="mp" class="fill mp"></div></div><div class="small">MP <span id="mpT"></span></div>
+  <div class="bar"><div id="xp" class="fill xp"></div></div><div class="small">EXP <span id="xpT"></span> • Zen <span id="zen"></span></div>
+</div>
+
+<div id="target" class="panel"><div id="targetName"></div><div class="bar"><div id="thp" class="fill hp"></div></div><div class="small">HP <span id="thpT"></span></div></div>
+<div id="rightTop"><button class="uiBtn" onclick="openWin('char')">♙ Character</button><button class="uiBtn" onclick="openWin('bag')">▣ Inventory</button><button class="uiBtn" onclick="openWin('map')">🗺 Map</button></div>
+
+<div id="bottom" class="panel">
+ <button class="slot" onclick="usePotion()"><b>🧪</b><span>Q</span></button>
+ <button class="slot" onclick="basicAttack()"><b>⚔</b><span>1</span></button>
+ <button class="slot" onclick="castSkill('power')"><b>✦</b><span>2</span></button>
+ <button class="slot" onclick="castSkill('twister')"><b>✹</b><span>3</span></button>
+ <button class="slot" onclick="castSkill('rage')"><b>☄</b><span>4</span></button>
+ <button class="slot" onclick="openWin('bag')"><b>🎒</b><span>I</span></button>
+</div>
+
+<div id="windows">
+ <div id="char" class="win panel"><button class="uiBtn close" onclick="closeWins()">X</button><h3>CHARACTER</h3>
+   <div class="row"><span>Level</span><b id="clv"></b></div><div class="row"><span>Strength</span><b id="cstr"></b></div><div class="row"><span>Agility</span><b id="cagi"></b></div><div class="row"><span>Vitality</span><b id="cvit"></b></div><div class="row"><span>Energy</span><b id="cene"></b></div>
+   <div class="row"><span>Attack</span><b id="catk"></b></div><div class="row"><span>Defense</span><b id="cdef"></b></div><div class="row"><span>Attack Speed</span><b id="casp"></b></div>
+   <p class="small">Điểm stat tự cộng khi lên cấp trong bản solo này.</p>
+ </div>
+ <div id="bag" class="win panel"><button class="uiBtn close" onclick="closeWins()">X</button><h3>INVENTORY</h3><div class="small">20 ô • chạm item để trang bị / dùng</div><div id="inv" class="grid"></div></div>
+ <div id="shop" class="win panel"><button class="uiBtn close" onclick="closeWins()">X</button><h3>NPC SHOP</h3><div id="shopList"></div></div>
+ <div id="map" class="win panel"><button class="uiBtn close" onclick="closeWins()">X</button><h3>WORLD MAP</h3><div class="row"><span>Lorencia</span><button class="uiBtn" onclick="changeMap('Lorencia')">Vào</button></div><div class="row"><span>Dungeon</span><button class="uiBtn" onclick="changeMap('Dungeon')">Vào</button></div><div class="row"><span>Devias</span><button class="uiBtn" onclick="changeMap('Devias')">Vào</button></div><p class="small">Các map dùng cùng một engine; quái và địa hình thay đổi theo map.</p></div>
+ <div id="quest" class="win panel"><button class="uiBtn close" onclick="closeWins()">X</button><h3>QUEST</h3><div id="questBody"></div></div>
+ <div id="npc" class="win panel"><button class="uiBtn close" onclick="closeWins()">X</button><h3 id="npcTitle">NPC</h3><div id="npcBody"></div></div>
+</div>
+<div id="toast"></div><div id="lootText"></div>
+
+<div id="touch"><div id="joy"><div id="knob"></div></div><div id="touchBtns"><button class="tbtn" onclick="basicAttack()">⚔</button><button class="tbtn" onclick="castSkill('power')">✦</button><button class="tbtn" onclick="castSkill('twister')">✹</button><button class="tbtn" onclick="usePotion()">🧪</button></div></div>
+
+<script>
+/* =========================================================
+   MU-STYLE SOLO WEB RPG
+   Một file HTML duy nhất, không cần thư viện ngoài.
+   Asset được vẽ bằng Canvas để có thể tải/chạy như một file.
+========================================================= */
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+let VW=innerWidth,VH=innerHeight,dpr=Math.min(devicePixelRatio||1,2);
+function resize(){VW=innerWidth;VH=innerHeight;canvas.width=VW*dpr;canvas.height=VH*dpr;canvas.style.width=VW+'px';canvas.style.height=VH+'px';ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
+
+const state={
+ map:'Lorencia', level:1, exp:0,next:100, zen:1500,
+ str:30,agi:22,vit:24,ene:12, hp:200,maxHp:200,mp:80,maxMp:80,
+ x:1100,y:920,dir:0,dead:false,
+ inv:[
+  {id:'sword',name:'Short Sword',icon:'⚔️',type:'weapon',power:4,qty:1,grade:0},
+  {id:'armor',name:'Leather Armor',icon:'🛡️',type:'armor',def:3,qty:1,grade:0},
+  {id:'helm',name:'Bronze Helm',icon:'⛑️',type:'helm',def:2,qty:1,grade:0},
+  {id:'potion',name:'Healing Potion',icon:'🧪',type:'potion',heal:80,qty:5},
+  {id:'zen',name:'Zen',icon:'🪙',type:'currency',qty:1}
+ ],
+ equip:{weapon:null,armor:null,helm:null,gloves:null,pants:null,boots:null},
+ quests:{spider:0,done:false},
+ lastSave:0
+};
+const maps={
+ Lorencia:{w:3000,h:2100,theme:'grass',title:'Lorencia',monsters:['Spider','Budokan'],rate:1},
+ Dungeon:{w:2500,h:1800,theme:'dungeon',title:'Dungeon',monsters:['Skeleton','Ghost'],rate:1.35},
+ Devias:{w:3000,h:2100,theme:'snow',title:'Devias',monsters:['Ice Monster','Yeti'],rate:1.6}
+};
+let mobs=[],drops=[],effects=[],floating=[],npcs=[],target=null,lastAttack=0,lastSkill=0,shake=0;
+let keys={},joy={x:0,y:0},camera={x:0,y:0};
+const mouse={x:0,y:0,down:false};
+const mobInfo={
+ Spider:{hp:70,atk:5,exp:28,zen:[18,45],color:'#682936',icon:'🕷️'},
+ Budokan:{hp:100,atk:8,exp:40,zen:[25,60],color:'#754a30',icon:'👹'},
+ Skeleton:{hp:120,atk:11,exp:52,zen:[35,75],color:'#a6a18b',icon:'💀'},
+ Ghost:{hp:95,atk:14,exp:58,zen:[40,85],color:'#5d7fa0',icon:'👻'},
+ 'Ice Monster':{hp:155,atk:17,exp:70,zen:[50,100],color:'#76b7c9',icon:'🧊'},
+ Yeti:{hp:220,atk:22,exp:100,zen:[70,130],color:'#d7dbe2',icon:'🐺'}
+};
+const itemPool=[
+ {id:'longsword',name:'Long Sword',icon:'⚔️',type:'weapon',power:8,value:180},
+ {id:'battle',name:'Battle Sword',icon:'🗡️',type:'weapon',power:13,value:320},
+ {id:'plate',name:'Scale Armor',icon:'🥋',type:'armor',def:8,value:260},
+ {id:'helm2',name:'Steel Helm',icon:'⛑️',type:'helm',def:6,value:180},
+ {id:'gloves',name:'Steel Gloves',icon:'🧤',type:'gloves',def:4,value:140},
+ {id:'boots',name:'Steel Boots',icon:'🥾',type:'boots',def:5,value:150},
+ {id:'pants',name:'Plate Pants',icon:'👖',type:'pants',def:7,value:220},
+ {id:'wing',name:'Tiny Wings',icon:'🪽',type:'wings',def:3,value:500}
+];
+
+function toast(s){const e=document.getElementById('toast');e.textContent=s;e.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.opacity=0,1200)}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function rand(a,b){return a+Math.random()*(b-a)}
+function int(a,b){return Math.floor(rand(a,b+1))}
+function worldToScreen(x,y){return{x:x-camera.x,y:y-camera.y}}
+function screenToWorld(x,y){return{x:x+camera.x,y:y+camera.y}}
+
+function drawMap(){
+ const m=maps[state.map],cx=camera.x,cy=camera.y;
+ ctx.fillStyle=m.theme==='dungeon'?'#202028':m.theme==='snow'?'#b9d0d7':'#365331';ctx.fillRect(0,0,VW,VH);
+ // texture
+ for(let x=Math.floor(cx/80)*80;x<cx+VW+80;x+=80)for(let y=Math.floor(cy/80)*80;y<cy+VH+80;y+=80){
+   let r=((x/80+y/80)%2===0)?0.035:0.02;
+   ctx.fillStyle=m.theme==='dungeon'?`rgba(120,110,125,${r})`:m.theme==='snow'?`rgba(255,255,255,${r+.03})`:`rgba(150,190,90,${r})`;ctx.fillRect(x-cx,y-cy,80,80)
+ }
+ // roads
+ ctx.fillStyle=m.theme==='dungeon'?'#36343a':m.theme==='snow'?'#d8e2e4':'#6f5c47';
+ ctx.fillRect(0,760-cy,m.w,VH);ctx.fillRect(1370-cx,0,230,m.h);
+ ctx.fillStyle=m.theme==='dungeon'?'#45434a':m.theme==='snow'?'#eef4f4':'#87745a';
+ ctx.fillRect(0,805-cy,m.w,120);ctx.fillRect(1420-cx,0,130,m.h);
+ // town square
+ if(state.map==='Lorencia'){
+   const p=worldToScreen(1500,820);ctx.fillStyle='#806d55';ctx.beginPath();ctx.arc(p.x,p.y,220,0,7);ctx.fill();ctx.strokeStyle='#4d3e2f';ctx.lineWidth=8;ctx.stroke();
+ }
+ // borders
+ ctx.strokeStyle=m.theme==='dungeon'?'#11111a':'#423622';ctx.lineWidth=28;ctx.strokeRect(-cx,-cy,m.w,m.h);
+ // scenery
+ for(let i=0;i<42;i++){let x=(i*617+301)%m.w,y=(i*997+177)%m.h;if(Math.abs(x-1450)<320&&Math.abs(y-820)<280)continue;drawTreeOrRock(x,y,m.theme)}
+ if(state.map==='Lorencia'){drawHouse(1280,580);drawHouse(1740,580);drawGate(1500,820)}
+ if(state.map==='Devias'){for(let i=0;i<18;i++)drawSnowRock((i*317)%m.w,(i*531)%m.h)}
+ if(state.map==='Dungeon'){for(let i=0;i<20;i++)drawPillar((i*191)%m.w,(i*307)%m.h)}
+}
+function drawTreeOrRock(x,y,theme){let p=worldToScreen(x,y);if(p.x<-100||p.x>VW+100||p.y<-120||p.y>VH+120)return;if(theme==='snow'){drawSnowRock(x,y);return}
+ ctx.fillStyle='#0005';ctx.beginPath();ctx.ellipse(p.x,p.y+18,28,8,0,0,7);ctx.fill();
+ ctx.fillStyle=theme==='dungeon'?'#3d3b42':'#5c3d28';ctx.fillRect(p.x-6,p.y-30,12,48);
+ ctx.fillStyle=theme==='dungeon'?'#55505c':'#315d31';ctx.beginPath();ctx.arc(p.x,p.y-42,31,0,7);ctx.fill();ctx.fillStyle=theme==='dungeon'?'#6a6470':'#3e7638';ctx.beginPath();ctx.arc(p.x-18,p.y-28,22,0,7);ctx.fill();ctx.beginPath();ctx.arc(p.x+18,p.y-28,22,0,7);ctx.fill()
+}
+function drawSnowRock(x,y){let p=worldToScreen(x,y);ctx.fillStyle='#0003';ctx.beginPath();ctx.ellipse(p.x,p.y+8,25,7,0,0,7);ctx.fill();ctx.fillStyle='#87999e';ctx.beginPath();ctx.moveTo(p.x-25,p.y+7);ctx.lineTo(p.x-8,p.y-24);ctx.lineTo(p.x+18,p.y-30);ctx.lineTo(p.x+30,p.y+8);ctx.closePath();ctx.fill();ctx.fillStyle='#eaf2f2';ctx.beginPath();ctx.moveTo(p.x-8,p.y-24);ctx.lineTo(p.x+18,p.y-30);ctx.lineTo(p.x+7,p.y-10);ctx.closePath();ctx.fill()}
+function drawHouse(x,y){let p=worldToScreen(x,y);ctx.fillStyle='#0005';ctx.fillRect(p.x-75,p.y-5,150,90);ctx.fillStyle='#674635';ctx.fillRect(p.x-68,p.y,136,78);ctx.fillStyle='#4c2427';ctx.beginPath();ctx.moveTo(p.x-82,p.y+4);ctx.lineTo(p.x,p.y-65);ctx.lineTo(p.x+82,p.y+4);ctx.closePath();ctx.fill();ctx.fillStyle='#241a19';ctx.fillRect(p.x-16,p.y+36,32,42);ctx.fillStyle='#8ab0b1';ctx.fillRect(p.x-52,p.y+24,24,20);ctx.fillRect(p.x+28,p.y+24,24,20)}
+function drawGate(x,y){let p=worldToScreen(x,y);ctx.strokeStyle='#7b5b31';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(p.x-95,p.y-80);ctx.lineTo(p.x-95,p.y+30);ctx.moveTo(p.x+95,p.y-80);ctx.lineTo(p.x+95,p.y+30);ctx.stroke();ctx.strokeStyle='#caa55b';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(p.x-95,p.y-78);ctx.lineTo(p.x,p.y-140);ctx.lineTo(p.x+95,p.y-78);ctx.stroke()}
+function drawPillar(x,y){let p=worldToScreen(x,y);ctx.fillStyle='#0005';ctx.fillRect(p.x-18,p.y-60,36,100);ctx.fillStyle='#5d5a63';ctx.fillRect(p.x-22,p.y-65,44,105);ctx.fillStyle='#77747d';ctx.fillRect(p.x-28,p.y-70,56,12)}
+function drawPlayer(){
+ let p=worldToScreen(state.x,state.y);ctx.save();ctx.translate(p.x,p.y);
+ ctx.fillStyle='#0007';ctx.beginPath();ctx.ellipse(0,30,30,9,0,0,7);ctx.fill();
+ // cape
+ ctx.fillStyle='#1a1d27';ctx.beginPath();ctx.moveTo(-23,-8);ctx.lineTo(-17,31);ctx.lineTo(18,31);ctx.lineTo(23,-8);ctx.closePath();ctx.fill();
+ // armor
+ let g=ctx.createLinearGradient(-20,-20,20,25);g.addColorStop(0,'#b8bcc4');g.addColorStop(.45,'#525966');g.addColorStop(1,'#1b1f29');ctx.fillStyle=g;ctx.strokeStyle='#d0b35d';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(-19,-20,38,48,8);ctx.fill();ctx.stroke();
+ // helmet
+ ctx.fillStyle='#3a3e49';ctx.beginPath();ctx.arc(0,-25,18,Math.PI,0);ctx.lineTo(18,-8);ctx.lineTo(-18,-8);ctx.closePath();ctx.fill();ctx.stroke();
+ ctx.fillStyle='#11141a';ctx.fillRect(-11,-19,22,6);
+ // sword
+ ctx.save();ctx.rotate(-.55);ctx.strokeStyle='#e4e4e4';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(24,-1);ctx.lineTo(62,-1);ctx.stroke();ctx.strokeStyle='#d4ad53';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(20,-12);ctx.lineTo(20,10);ctx.stroke();ctx.restore();
+ ctx.restore();
+}
+function drawMob(m){
+ let p=worldToScreen(m.x,m.y);if(p.x<-80||p.x>VW+80||p.y<-80||p.y>VH+80)return;
+ ctx.fillStyle='#0006';ctx.beginPath();ctx.ellipse(p.x,p.y+18,26,7,0,0,7);ctx.fill();
+ ctx.fillStyle=m.color;ctx.strokeStyle=m===target?'#ffe17a':'#24151a';ctx.lineWidth=m===target?3:2;
+ if(m.kind.includes('Skeleton')){ctx.beginPath();ctx.arc(p.x,p.y-5,19,0,7);ctx.fill();ctx.stroke();ctx.fillStyle='#171717';ctx.fillRect(p.x-10,p.y-8,6,5);ctx.fillRect(p.x+4,p.y-8,6,5);ctx.strokeStyle=m.color;ctx.beginPath();ctx.moveTo(p.x,p.y+12);ctx.lineTo(p.x,p.y+34);ctx.moveTo(p.x-15,p.y+18);ctx.lineTo(p.x+15,p.y+18);ctx.stroke()}
+ else {ctx.beginPath();ctx.ellipse(p.x,p.y,23,18,0,0,7);ctx.fill();ctx.stroke();ctx.strokeStyle='#26151a';ctx.lineWidth=4;for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(p.x-15,p.y+i*10);ctx.lineTo(p.x-34,p.y+i*14);ctx.moveTo(p.x+15,p.y+i*10);ctx.lineTo(p.x+34,p.y+i*14);ctx.stroke()}}
+ // eyes
+ ctx.fillStyle='#ffd85b';ctx.fillRect(p.x-9,p.y-6,5,4);ctx.fillRect(p.x+4,p.y-6,5,4);
+ // hp
+ ctx.fillStyle='#120f10';ctx.fillRect(p.x-28,p.y-40,56,6);ctx.fillStyle='#b51e25';ctx.fillRect(p.x-27,p.y-39,54*(m.hp/m.maxHp),4);
+}
+function drawNpc(n){let p=worldToScreen(n.x,n.y);ctx.fillStyle='#0005';ctx.beginPath();ctx.ellipse(p.x,p.y+18,20,6,0,0,7);ctx.fill();ctx.fillStyle=n.color;ctx.fillRect(p.x-14,p.y-2,28,35);ctx.fillStyle='#d6a47d';ctx.beginPath();ctx.arc(p.x,p.y-15,12,0,7);ctx.fill();ctx.fillStyle='#ffe08a';ctx.font='12px Arial';ctx.textAlign='center';ctx.fillText(n.name,p.x,p.y+55)}
+function render(){
+ drawMap();npcs.forEach(drawNpc);drops.forEach(d=>drawDrop(d));mobs.forEach(drawMob);drawPlayer();
+ effects.forEach(e=>{let p=worldToScreen(e.x,e.y);ctx.globalAlpha=e.life/e.max;ctx.strokeStyle=e.color;ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y,e.r*(1-e.life/e.max)+10,0,7);ctx.stroke();ctx.globalAlpha=1});
+ floating.forEach(f=>{let p=worldToScreen(f.x,f.y);ctx.globalAlpha=f.life/f.max;ctx.fillStyle=f.color;ctx.font='bold '+f.size+'px Arial';ctx.textAlign='center';ctx.fillText(f.text,p.x,p.y);ctx.globalAlpha=1});
+ drawMinimap();requestAnimationFrame(render);
+}
+function drawDrop(d){let p=worldToScreen(d.x,d.y);if(p.x<-30||p.x>VW+30||p.y<-30||p.y>VH+30)return;ctx.fillStyle=d.color;ctx.beginPath();ctx.moveTo(p.x,p.y-10);ctx.lineTo(p.x+9,p.y);ctx.lineTo(p.x,p.y+10);ctx.lineTo(p.x-9,p.y);ctx.closePath();ctx.fill();ctx.strokeStyle='#fff8';ctx.stroke()}
+function drawMinimap(){let w=145,h=110,x=VW-w-12,y=VH-h-88;ctx.fillStyle='#080b0ddd';ctx.fillRect(x,y,w,h);ctx.strokeStyle='#80672f';ctx.strokeRect(x,y,w,h);let m=maps[state.map];ctx.fillStyle=state.map==='Dungeon'?'#4a4650':state.map==='Devias'?'#b5cbd0':'#315531';ctx.fillRect(x+2,y+2,w-4,h-4);ctx.fillStyle='#ffd65b';ctx.beginPath();ctx.arc(x+state.x/m.w*(w-4)+2,y+state.y/m.h*(h-4)+2,3,0,7);ctx.fill();ctx.fillStyle='#d44747';mobs.forEach(q=>{if(q.alive){ctx.fillRect(x+q.x/m.w*(w-4),y+q.y/m.h*(h-4),2,2)}});ctx.fillStyle='#ffe18a';ctx.font='10px Arial';ctx.fillText(state.map,x+5,y+13)}
+
+function spawnMobs(){
+ mobs=[];let info=maps[state.map];for(let i=0;i<22;i++){let x=rand(180,info.w-180),y=rand(180,info.h-180);if(Math.hypot(x-state.x,y-state.y)<300){i--;continue}let kind=info.monsters[int(0,info.monsters.length-1)],z=mobInfo[kind],hp=Math.round(z.hp*info.rate*(.85+Math.random()*.3));mobs.push({kind,x,y,maxHp:hp,hp,level:Math.max(1,state.level+int(-1,2)),atk:z.atk*info.rate,exp:z.exp,zen:z.zen, color:z.color,alive:true,speed:18+Math.random()*16,hitAt:0})}
+}
+function initNpcs(){npcs=[{name:'POTION GIRL',x:1480,y:690,color:'#7d4962',action:'shop'},{name:'BLACKSMITH',x:1610,y:690,color:'#5c6573',action:'shop'},{name:'CAPTAIN',x:1510,y:930,color:'#354e65',action:'quest'}]}
+function resetMap(pos=true){let m=maps[state.map];if(pos){state.x=m.w/2;state.y=m.h/2+230}target=null;spawnMobs();initNpcs();toast('Đã vào '+m.title)}
+function changeMap(name){state.map=name;closeWins();resetMap(true);saveGame()}
+function gainExp(n){state.exp+=Math.floor(n);while(state.exp>=state.next){state.exp-=state.next;state.level++;state.next=Math.floor(state.next*1.23);state.str+=3;state.agi+=2;state.vit+=2;state.ene+=1;state.maxHp+=30;state.maxMp+=10;state.hp=state.maxHp;state.mp=state.maxMp;toast('LEVEL UP!  Lv '+state.level);fx(state.x,state.y,'#ffe56b',70)}updateUI()}
+function calcAtk(){let p=state.str*.55+8,weapon=state.equip.weapon?state.equip.weapon.power:4;return [Math.floor(p+weapon),Math.floor(p+weapon+10)]}
+function calcDef(){let d=5+state.agi*.3;Object.values(state.equip).forEach(i=>{if(i)d+=i.def||0});return Math.floor(d)}
+function basicAttack(){
+ if(state.dead||!target||!target.alive){findTarget();return}
+ let d=dist(state,target);if(d>105){toast('Đang tiến tới mục tiêu');return}
+ if(performance.now()-lastAttack<520)return;lastAttack=performance.now();let a=calcAtk(),dmg=int(a[0],a[1]);damageMob(target,dmg,false)
+}
+function findTarget(){let best=null,bd=Infinity;mobs.forEach(m=>{if(m.alive){let d=dist(state,m);if(d<bd){bd=d;best=m}}});target=best;if(target)toast('Đã chọn '+target.kind)}
+function castSkill(which){
+ if(state.dead||!target||!target.alive){findTarget();return}
+ let cfg={power:{name:'Power Strike',mp:10,range:135,mul:1.8,color:'#ffe16b'},twister:{name:'Whirlwind',mp:18,range:155,mul:1.45,color:'#75d8ff'},rage:{name:'Rage Slash',mp:25,range:180,mul:2.2,color:'#ff725e'}}[which];
+ if(state.mp<cfg.mp){toast('Không đủ MP');return}if(dist(state,target)>cfg.range){toast('Mục tiêu quá xa');return}if(performance.now()-lastSkill<650)return;lastSkill=performance.now();state.mp-=cfg.mp;let a=calcAtk(),dmg=Math.floor(int(a[0],a[1])*cfg.mul);damageMob(target,dmg,true,cfg.color);updateUI()
+}
+function damageMob(m,dmg,special,color){
+ m.hp-=dmg;floatText(m.x,m.y-35,'-'+dmg,color||'#fff',special?20:15);fx(m.x,m.y,color||'#fff',special?55:30);
+ if(m.hp<=0)killMob(m)
+}
+function killMob(m){
+ m.alive=false;state.zen+=int(m.zen[0],m.zen[1]);gainExp(m.exp);state.quests.spider+=(m.kind==='Spider'?1:0);
+ floatText(m.x,m.y-55,'+'+m.exp+' EXP','#ffe66b',13);floatText(m.x,m.y-72,'+'+m.zen+' Zen','#f5d77b',12);
+ if(Math.random()<.65){let it={...itemPool[int(0,itemPool.length-1)]};it.grade=Math.random()<.2?int(1,3):0;it.qty=1;drops.push({x:m.x,y:m.y,item:it,color:it.type==='weapon'?'#e8e8e8':it.type==='armor'?'#72b8ff':'#d8b35d'})}
+ if(Math.random()<.3)drops.push({x:m.x+rand(-12,12),y:m.y+rand(-12,12),item:{id:'potion',name:'Healing Potion',icon:'🧪',type:'potion',heal:80,qty:1},color:'#58b8ff'});
+ target=null;checkQuest();updateUI()
+}
+function collectDrops(){
+ for(let i=drops.length-1;i>=0;i--){let d=drops[i];if(Math.hypot(d.x-state.x,d.y-state.y)<65){if(d.item){addItem(d.item);toast('Nhặt '+d.item.name+(d.item.grade?' +'+d.item.grade:''))}drops.splice(i,1)}}
+}
+function addItem(it){let same=state.inv.find(x=>x.id===it.id&&x.type==='potion');if(same&&it.type==='potion')same.qty+=it.qty;else state.inv.push(it);renderInv()}
+function usePotion(){let p=state.inv.find(x=>x.type==='potion'&&x.qty>0);if(!p){toast('Hết Potion');return}if(state.hp>=state.maxHp){toast('HP đầy');return}state.hp=Math.min(state.maxHp,state.hp+(p.heal||80));p.qty--;if(p.qty<=0)state.inv=state.inv.filter(x=>x!==p);toast('Hồi HP');updateUI();renderInv()}
+function equipItem(index){let it=state.inv[index];if(!it)return;if(it.type==='potion'){usePotion();return}if(!['weapon','armor','helm','gloves','pants','boots','wings'].includes(it.type))return;let old=state.equip[it.type];state.equip[it.type]=it;state.inv.splice(index,1);if(old)state.inv.push(old);toast('Trang bị '+it.name+(it.grade?' +'+it.grade:''));renderInv();updateUI();saveGame()}
+function renderInv(){const e=document.getElementById('inv');e.innerHTML='';for(let i=0;i<20;i++){let it=state.inv[i];let d=document.createElement('button');d.className='item';d.onclick=()=>equipItem(i);if(it)d.innerHTML='<span class="ico">'+it.icon+'</span>'+it.name+(it.grade?' +'+it.grade:'')+(it.qty>1?'<span class="q">'+it.qty+'</span>':'');e.appendChild(d)}}
+function openWin(id){closeWins();document.getElementById(id).style.display='block';if(id==='char')updateChar();if(id==='bag')renderInv();if(id==='shop')renderShop();if(id==='quest')renderQuest()}
+function closeWins(){document.querySelectorAll('.win').forEach(x=>x.style.display='none')}
+function updateChar(){document.getElementById('clv').textContent=state.level;document.getElementById('cstr').textContent=state.str;document.getElementById('cagi').textContent=state.agi;document.getElementById('cvit').textContent=state.vit;document.getElementById('cene').textContent=state.ene;document.getElementById('catk').textContent=calcAtk().join(' - ');document.getElementById('cdef').textContent=calcDef();document.getElementById('casp').textContent=80+Math.floor(state.agi*.8)}
+function updateUI(){
+ document.getElementById('lv').textContent=state.level;document.getElementById('hpT').textContent=Math.ceil(state.hp)+'/'+state.maxHp;document.getElementById('mpT').textContent=Math.ceil(state.mp)+'/'+state.maxMp;document.getElementById('xpT').textContent=state.exp+'/'+state.next;document.getElementById('zen').textContent=state.zen;
+ document.getElementById('hp').style.width=state.hp/state.maxHp*100+'%';document.getElementById('mp').style.width=state.mp/state.maxMp*100+'%';document.getElementById('xp').style.width=state.exp/state.next*100+'%';
+ if(target&&target.alive){document.getElementById('target').style.display='block';document.getElementById('targetName').textContent=target.kind+'  Lv.'+target.level;document.getElementById('thp').style.width=Math.max(0,target.hp/target.maxHp*100)+'%';document.getElementById('thpT').textContent=Math.max(0,Math.floor(target.hp))+'/'+target.maxHp}else document.getElementById('target').style.display='none'
+}
+function renderShop(){let arr=[{...itemPool[0],price:180},{...itemPool[2],price:260},{id:'potion',name:'Healing Potion',icon:'🧪',type:'potion',heal:80,price:35},{id:'mpotion',name:'Mana Potion',icon:'🔵',type:'mpotion',heal:40,price:40}];document.getElementById('shopList').innerHTML=arr.map((it,i)=>`<div class="row"><span>${it.icon} ${it.name}</span><button class="uiBtn" onclick="buy(${i})">${it.price} Zen</button></div>`).join('');window.shop=arr}
+function buy(i){let it=window.shop[i];if(state.zen<it.price){toast('Không đủ Zen');return}state.zen-=it.price;addItem({...it,qty:1});toast('Mua '+it.name);updateUI()}
+function renderQuest(){document.getElementById('questBody').innerHTML='<b>Thợ săn Spider</b><p>Đánh bại 10 Spider tại Lorencia.</p><p>Tiến độ: '+Math.min(10,state.quests.spider)+'/10</p>'+(state.quests.done?'<b style="color:#7dff8a">Đã hoàn thành.</b>':'<button class="uiBtn" onclick="claimQuest()">Nhận thưởng</button>')}
+function checkQuest(){if(state.quests.spider>=10&&!state.quests.done)toast('Quest hoàn thành! Mở Quest để nhận thưởng')}
+function claimQuest(){if(state.quests.spider<10){toast('Chưa đủ');return}if(state.quests.done){toast('Đã nhận');return}state.quests.done=true;state.zen+=1000;gainExp(500);toast('Nhận 1000 Zen + 500 EXP');renderQuest()}
+function npcClick(n){if(n.action==='shop')openWin('shop');else openWin('quest')}
+function fx(x,y,color='#fff',r=40){effects.push({x,y,color,r,life:260,max:260})}
+function floatText(x,y,text,color='#fff',size=15){floating.push({x,y,text,color,size,life:800,max:800})}
+function updateEffects(dt){effects.forEach(e=>e.life-=dt);effects=effects.filter(e=>e.life>0);floating.forEach(f=>{f.y-=.025*dt;f.life-=dt});floating=floating.filter(f=>f.life>0)}
+function updateMobs(dt){
+ mobs.forEach(m=>{if(!m.alive)return;let d=dist(state,m);if(d<360){let a=Math.atan2(state.y-m.y,state.x-m.x);if(d>80){m.x+=Math.cos(a)*m.speed*dt;m.y+=Math.sin(a)*m.speed*dt}else if(performance.now()>m.hitAt){m.hitAt=performance.now()+1100;let dmg=Math.max(1,Math.floor(m.atk-calcDef()*.25));state.hp-=dmg;floatText(state.x,state.y-50,'-'+dmg,'#ff6767',14);fx(state.x,state.y,'#ff4e4e',25);if(state.hp<=0)die()}}});
+}
+function die(){state.dead=true;state.hp=0;target=null;toast('Bạn đã ngã xuống...');setTimeout(()=>{state.dead=false;state.hp=state.maxHp;state.mp=state.maxMp;state.x=maps[state.map].w/2;state.y=maps[state.map].h/2+230;toast('Hồi sinh tại thành phố')},1800)}
+function move(dt){
+ if(state.dead)return;
+ let vx=0,vy=0;if(keys.w)vy--;if(keys.s)vy++;if(keys.a)vx--;if(keys.d)vx++;vx+=joy.x;vy+=joy.y;let l=Math.hypot(vx,vy);if(l){vx/=l;vy/=l;state.x=clamp(state.x+vx*180*dt,50,maps[state.map].w-50);state.y=clamp(state.y+vy*180*dt,50,maps[state.map].h-50)}
+ if(target&&target.alive&&dist(state,target)>82){let a=Math.atan2(target.y-state.y,target.x-state.x);state.x+=Math.cos(a)*105*dt;state.y+=Math.sin(a)*105*dt}
+ collectDrops();
+}
+function updateCamera(){camera.x=clamp(state.x-VW/2,0,maps[state.map].w-VW);camera.y=clamp(state.y-VH/2,0,maps[state.map].h-VH)}
+function saveGame(){let copy={...state,equip:{...state.equip},inv:state.inv};localStorage.setItem('muClassicSave',JSON.stringify(copy));state.lastSave=Date.now();toast('Đã lưu game')}
+function loadGame(){try{let s=JSON.parse(localStorage.getItem('muClassicSave'));if(s){Object.assign(state,s);toast('Đã tải save')}}catch(e){}}
+function handlePointer(x,y){
+ let w=screenToWorld(x,y);
+ // mob selection
+ let nearest=null,bd=55;mobs.forEach(m=>{if(!m.alive)return;let d=Math.hypot(w.x-m.x,w.y-m.y);if(d<bd){bd=d;nearest=m}});if(nearest){target=nearest;toast('Target: '+target.kind);updateUI();return}
+ // npc
+ npcs.forEach(n=>{if(Math.hypot(w.x-n.x,w.y-n.y)<55)npcClick(n)})
+ // drops
+}
+canvas.addEventListener('pointerdown',e=>{mouse.down=true;handlePointer(e.clientX,e.clientY)});canvas.addEventListener('pointerup',()=>mouse.down=false);
+addEventListener('keydown',e=>{let k=e.key.toLowerCase();if(k==='w'||k==='a'||k==='s'||k==='d')keys[k]=true;if(k==='1')basicAttack();if(k==='2')castSkill('power');if(k==='3')castSkill('twister');if(k==='4')castSkill('rage');if(k==='q')usePotion();if(k==='i')openWin('bag');if(k==='c')openWin('char');if(k==='escape')closeWins()});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+
+const joyEl=document.getElementById('joy'),knob=document.getElementById('knob');let dragging=false;
+function joySet(e){if(!dragging)return;let p=e.touches?e.touches[0]:e,r=joyEl.getBoundingClientRect(),dx=p.clientX-(r.left+r.width/2),dy=p.clientY-(r.top+r.height/2),max=34,l=Math.hypot(dx,dy)||1;if(l>max){dx=dx/l*max;dy=dy/l*max}joy.x=dx/max;joy.y=dy/max;knob.style.transform=`translate(${dx}px,${dy}px)`}
+joyEl.addEventListener('touchstart',e=>{dragging=true;joySet(e)},{passive:true});joyEl.addEventListener('touchmove',joySet,{passive:true});joyEl.addEventListener('touchend',()=>{dragging=false;joy.x=joy.y=0;knob.style.transform='translate(0,0)'});
+joyEl.addEventListener('mousedown',()=>dragging=true);addEventListener('mousemove',joySet);addEventListener('mouseup',()=>{dragging=false;joy.x=joy.y=0;knob.style.transform='translate(0,0)'});
+
+function tick(now){let dt=Math.min(.035,(now-(tick.last||now))/1000);tick.last=now;move(dt);updateMobs(dt);updateEffects(dt);updateCamera();if(now-state.lastSave>30000)saveGame();updateUI();requestAnimationFrame(tick)}
+loadGame();resetMap(false);updateCamera();render();requestAnimationFrame(tick);renderInv();updateUI();
+</script>
+</body>
+</html>
